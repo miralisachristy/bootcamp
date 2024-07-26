@@ -38,6 +38,18 @@ const writeContacts = (contacts) => {
 };
 
 /**
+ * Checks if a contact with the given name already exists.
+ * @param {string} name - The name of the contact to check.
+ * @returns {boolean} True if the contact exists, false otherwise.
+ */
+const contactExists = (name) => {
+    const contacts = readContacts();
+    return contacts.some(
+        (contact) => contact.name.toLowerCase() === name.toLowerCase()
+    );
+};
+
+/**
  * Adds a new contact.
  * @returns {Promise<void>}
  */
@@ -46,6 +58,12 @@ const addContact = async () => {
         {
             name: "name",
             message: "Masukkan nama:",
+            validate: async (value) => {
+                if (contactExists(value)) {
+                    return "Nama kontak sudah ada! Silakan masukkan nama yang berbeda.";
+                }
+                return true;
+            },
         },
         {
             name: "phone",
@@ -70,10 +88,10 @@ const addContact = async () => {
     ];
 
     const getInput = (question) => {
-        return new Promise((resolve) => {
-            rl.question(`${question.message} `, (input) => {
+        return new Promise(async (resolve) => {
+            rl.question(`${question.message} `, async (input) => {
                 if (question.validate) {
-                    const valid = question.validate(input);
+                    const valid = await question.validate(input);
                     if (valid === true) {
                         resolve(input);
                     } else {
@@ -107,12 +125,16 @@ const addContact = async () => {
  */
 const listContacts = () => {
     const contacts = readContacts();
-    console.log("Daftar Kontak:");
-    contacts.forEach((contact, index) => {
-        console.log(
-            `${index + 1}. Nama: ${contact.name}, Telepon: ${contact.phone}`
-        );
-    });
+    if (contacts.length === 0) {
+        console.log("Tidak ada data.");
+    } else {
+        console.log("Daftar Kontak:");
+        contacts.forEach((contact, index) => {
+            console.log(
+                `${index + 1}. Nama: ${contact.name}, Telepon: ${contact.phone}, Email: ${contact.email}`
+            );
+        });
+    }
     rl.close();
     process.exit(0);
 };
@@ -158,9 +180,24 @@ const deleteContact = (name) => {
     process.exit(0);
 };
 
+/**
+ * Deletes all contacts.
+ * @returns {void}
+ */
+const deleteAllContacts = () => {
+    if (fs.existsSync(contactsFile)) {
+        fs.unlinkSync(contactsFile);
+        console.log("Semua data kontak berhasil dihapus.");
+    } else {
+        console.log("Tidak ada data untuk dihapus.");
+    }
+    rl.close();
+    process.exit(0);
+};
+
 // Konfigurasi yargs untuk menangani berbagai perintah
 yargs(hideBin(process.argv))
-    .version("1.0.2")
+    .version("1.0.3")
     .command("add", "Tambah kontak baru", {}, addContact)
     .command("list", "Tampilkan semua kontak", {}, listContacts)
     .command(
@@ -189,6 +226,7 @@ yargs(hideBin(process.argv))
             deleteContact(argv.name);
         }
     )
+    .command("delete-all", "Hapus semua data kontak", {}, deleteAllContacts)
     .demandCommand(1, "Harap pilih perintah yang valid")
     .help()
     .argv;
