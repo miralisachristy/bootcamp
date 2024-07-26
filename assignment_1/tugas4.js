@@ -1,20 +1,21 @@
-const fs = require("fs");
-const path = require("path");
-const validator = require("validator");
-const readline = require("readline");
-const yargs = require("yargs");
-const { hideBin } = require("yargs/helpers");
+const fs = require("fs"); // Modul 'fs' untuk berinteraksi dengan sistem file
+const path = require("path"); // Modul 'path' untuk menangani path file
+const validator = require("validator"); // Modul 'validator' untuk validasi data
+const readline = require("readline"); // Modul 'readline' untuk membaca input dari pengguna
+const yargs = require("yargs"); // Modul 'yargs' untuk menangani command-line arguments
+const { hideBin } = require("yargs/helpers"); // Helper untuk menghilangkan argumen bin dari argv
 
+// Membuat interface readline untuk membaca input dari stdin
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
 });
 
-const dirPath = "./data";
-const contactsFile = path.join(dirPath, "contacts.json");
+const dirPath = "./data"; // Path ke direktori data
+const contactsFile = path.join(dirPath, "contacts.json"); // Path ke file kontak JSON
 
 /**
- * Reads contacts from the file.
+ * Membaca kontak dari file.
  * @returns {Array} List of contacts.
  */
 const readContacts = () => {
@@ -26,7 +27,7 @@ const readContacts = () => {
 };
 
 /**
- * Writes contacts to the file.
+ * Menulis kontak ke file.
  * @param {Array} contacts - List of contacts to write.
  * @returns {void}
  */
@@ -38,9 +39,9 @@ const writeContacts = (contacts) => {
 };
 
 /**
- * Checks if a contact with the given name already exists.
- * @param {string} name - The name of the contact to check.
- * @returns {boolean} True if the contact exists, false otherwise.
+ * Memeriksa apakah kontak dengan nama yang diberikan sudah ada.
+ * @param {string} name - Nama kontak yang akan diperiksa.
+ * @returns {boolean} True jika kontak ada, false jika tidak.
  */
 const contactExists = (name) => {
     const contacts = readContacts();
@@ -50,7 +51,7 @@ const contactExists = (name) => {
 };
 
 /**
- * Adds a new contact.
+ * Menambahkan kontak baru.
  * @returns {Promise<void>}
  */
 const addContact = async () => {
@@ -120,7 +121,7 @@ const addContact = async () => {
 };
 
 /**
- * Lists all contacts.
+ * Menampilkan semua kontak.
  * @returns {void}
  */
 const listContacts = () => {
@@ -140,8 +141,8 @@ const listContacts = () => {
 };
 
 /**
- * Shows the detail of a contact by name.
- * @param {string} name - The name of the contact.
+ * Menampilkan detail kontak berdasarkan nama.
+ * @param {string} name - Nama kontak.
  * @returns {void}
  */
 const detailContact = (name) => {
@@ -160,8 +161,8 @@ const detailContact = (name) => {
 };
 
 /**
- * Deletes a contact by name.
- * @param {string} name - The name of the contact.
+ * Menghapus kontak berdasarkan nama.
+ * @param {string} name - Nama kontak.
  * @returns {void}
  */
 const deleteContact = (name) => {
@@ -181,7 +182,7 @@ const deleteContact = (name) => {
 };
 
 /**
- * Deletes all contacts.
+ * Menghapus semua kontak.
  * @returns {void}
  */
 const deleteAllContacts = () => {
@@ -195,11 +196,106 @@ const deleteAllContacts = () => {
     process.exit(0);
 };
 
+/**
+ * Memperbarui kontak berdasarkan nama.
+ * @param {string} name - Nama kontak yang akan diperbarui.
+ * @returns {Promise<void>}
+ */
+const updateContact = async (name) => {
+    const contacts = readContacts(); // Membaca kontak dari file
+    const contactIndex = contacts.findIndex(
+        (c) => c.name.toLowerCase() === name.toLowerCase()
+    ); // Mencari indeks kontak berdasarkan nama
+
+    if (contactIndex === -1) {
+        console.log(`Kontak dengan nama ${name} tidak ditemukan.`); // Menampilkan pesan jika kontak tidak ditemukan
+        rl.close();
+        process.exit(0);
+    }
+
+    // Pertanyaan untuk memilih data yang ingin diperbarui
+    const updateOptions = [
+        {
+            name: "field",
+            message: "Apa yang ingin Anda perbarui? (name/phone/email):",
+            validate: (value) => {
+                const validFields = ["name", "phone", "email"];
+                if (validFields.includes(value.toLowerCase())) {
+                    return true;
+                }
+                return "Pilihan tidak valid! Silakan pilih 'name', 'phone', atau 'email'.";
+            },
+        },
+    ];
+
+    // Mendapatkan pilihan field yang ingin diperbarui
+    const getField = async () => {
+        return new Promise((resolve) => {
+            rl.question(`${updateOptions[0].message} `, (input) => {
+                const valid = updateOptions[0].validate(input);
+                if (valid === true) {
+                    resolve(input.toLowerCase());
+                } else {
+                    console.log(valid);
+                    resolve(getField());
+                }
+            });
+        });
+    };
+
+    // Mendapatkan input untuk data yang akan diperbarui
+    const fieldToUpdate = await getField();
+
+    // Pertanyaan untuk input baru
+    const questions = [
+        {
+            name: "newValue",
+            message: `Masukkan ${fieldToUpdate} baru:`,
+            validate: (value) => {
+                if (fieldToUpdate === "phone" && !validator.isMobilePhone(value, "id-ID")) {
+                    return "Nomor telepon tidak valid!";
+                }
+                if (fieldToUpdate === "email" && !validator.isEmail(value)) {
+                    return "Email tidak valid!";
+                }
+                return true;
+            },
+        },
+    ];
+
+    const getInput = (question) => {
+        return new Promise(async (resolve) => {
+            rl.question(`${question.message} `, async (input) => {
+                const valid = await question.validate(input);
+                if (valid === true) {
+                    resolve(input);
+                } else {
+                    console.log(valid);
+                    resolve(getInput(question));
+                }
+            });
+        });
+    };
+
+    const newValue = await getInput(questions[0]);
+
+    // Memperbarui data kontak dengan data baru
+    contacts[contactIndex] = {
+        ...contacts[contactIndex],
+        [fieldToUpdate]: newValue,
+    };
+    writeContacts(contacts); // Menyimpan kontak yang telah diperbarui
+    console.log("Kontak berhasil diperbarui!");
+
+    rl.close();
+    process.exit(0);
+};
+
 // Konfigurasi yargs untuk menangani berbagai perintah
 yargs(hideBin(process.argv))
-    .version("1.0.3")
-    .command("add", "Tambah kontak baru", {}, addContact)
-    .command("list", "Tampilkan semua kontak", {}, listContacts)
+    .version("1.0.4") // Versi aplikasi
+    .command("add", "Tambah kontak baru", {}, addContact) // Command untuk menambahkan kontak
+    .command("list", "Tampilkan semua kontak", {}, listContacts) // Command untuk menampilkan semua kontak
     .command(
         "detail <name>",
         "Tampilkan detail kontak berdasarkan nama",
@@ -210,7 +306,7 @@ yargs(hideBin(process.argv))
             });
         },
         (argv) => {
-            detailContact(argv.name);
+            detailContact(argv.name); // Menampilkan detail kontak
         }
     )
     .command(
@@ -223,10 +319,23 @@ yargs(hideBin(process.argv))
             });
         },
         (argv) => {
-            deleteContact(argv.name);
+            deleteContact(argv.name); // Menghapus kontak
         }
     )
-    .command("delete-all", "Hapus semua data kontak", {}, deleteAllContacts)
-    .demandCommand(1, "Harap pilih perintah yang valid")
-    .help()
-    .argv;
+    .command("delete-all", "Hapus semua data kontak", {}, deleteAllContacts) // Command untuk menghapus semua data kontak
+    .command(
+        "update <name>",
+        "Perbarui kontak berdasarkan nama",
+        (yargs) => {
+            yargs.positional("name", {
+                describe: "Nama kontak",
+                type: "string",
+            });
+        },
+        (argv) => {
+            updateContact(argv.name); // Memperbarui kontak
+        }
+    )
+    .demandCommand(1, "Harap pilih perintah yang valid") // Meminta setidaknya satu command
+    .help() // Menampilkan bantuan
+    .argv; // Mengurai argumen command-line
