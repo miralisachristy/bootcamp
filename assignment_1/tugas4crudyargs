@@ -1,0 +1,221 @@
+// Mengimpor modul yang diperlukan
+const fs = require('fs');          // Modul untuk operasi file, seperti membaca dan menulis file
+const readline = require('readline'); // Modul untuk interaksi berbasis teks di terminal
+const validator = require('validator'); // Modul untuk memvalidasi data seperti email dan nomor telepon
+const yargs = require('yargs'); // Modul untuk memproses argumen command line
+
+// Nama file untuk menyimpan data kontak
+const contactFile = "contactlisa.json";
+
+// Fungsi untuk membaca data kontak dari file
+const readContact = () => {
+    if (fs.existsSync(contactFile)) { // Periksa apakah file kontak ada
+        const data = fs.readFileSync(contactFile); // Baca isi file sebagai buffer
+        return JSON.parse(data); // Konversi buffer menjadi objek JavaScript dan kembalikan sebagai array
+    } else {
+        return []; // Jika file tidak ada, kembalikan array kosong
+    }
+};
+
+// Fungsi untuk menulis data kontak ke file
+const writeContact = (contact) => {
+    fs.writeFileSync(contactFile, JSON.stringify(contact, null, 2)); // Konversi data kontak menjadi JSON dengan indentasi 2 spasi dan tulis ke file
+};
+
+// Fungsi untuk menyimpan kontak ke file
+const saveContact = (contact) => {
+    let contacts = readContact(); // Membaca daftar kontak yang ada dari file
+    contacts.push(contact); // Menambahkan kontak baru ke daftar
+    writeContact(contacts); // Menulis daftar kontak yang diperbarui ke file
+};
+
+// Fungsi untuk memperbarui kontak berdasarkan nama
+const updateContact = (oldName, newName, updates) => {
+    let contacts = readContact(); // Membaca daftar kontak yang ada dari file
+    let contactIndex = contacts.findIndex(c => c.name === oldName); // Mencari kontak berdasarkan nama
+
+    if (contactIndex !== -1) { // Jika nama ditemukan
+        if (newName) {
+            contacts[contactIndex].name = newName; // Jika nama baru diberikan, perbarui nama kontak
+        }
+        // Memperbarui informasi kontak dengan data baru
+        Object.assign(contacts[contactIndex], updates);
+        writeContact(contacts); // Menulis daftar kontak yang diperbarui ke file
+        console.log(`Kontak ${oldName} berhasil diperbarui.`); // Tampilkan konfirmasi
+    } else {
+        console.log(`Kontak dengan nama ${oldName} tidak ditemukan.`); // Tampilkan pesan jika kontak tidak ditemukan
+    }
+};
+
+// Fungsi untuk menghapus kontak berdasarkan nama
+const deleteContact = (name) => {
+    let contacts = readContact(); // Membaca daftar kontak yang ada dari file
+    let updatedContacts = contacts.filter(c => c.name !== name); // Menghapus kontak dengan nama yang diberikan
+    if (contacts.length !== updatedContacts.length) { // Jika ada kontak yang dihapus
+        writeContact(updatedContacts); // Menulis daftar kontak yang diperbarui ke file
+        console.log(`Kontak ${name} berhasil dihapus.`); // Tampilkan konfirmasi
+    } else {
+        console.log(`Kontak dengan nama ${name} tidak ditemukan.`); // Tampilkan pesan jika kontak tidak ditemukan
+    }
+};
+
+// Fungsi untuk menanyakan semua pertanyaan sekaligus
+const askAllQuestions = (questions, callback) => {
+    const rl = readline.createInterface({
+        input: process.stdin,  // Mengambil input dari standard input (keyboard)
+        output: process.stdout // Mengeluarkan output ke standard output (terminal)
+    });
+
+    const answers = {}; // Objek untuk menyimpan jawaban
+    let questionIndex = 0; // Index pertanyaan saat ini
+
+    // Fungsi untuk mengajukan pertanyaan berikutnya
+    const askNextQuestion = () => {
+        if (questionIndex < questions.length) { // Jika masih ada pertanyaan yang tersisa
+            const question = questions[questionIndex]; // Ambil pertanyaan saat ini dari daftar
+            rl.question(question.query, (answer) => { // Ajukan pertanyaan dan ambil jawaban dari pengguna
+                if (question.validate(answer)) { // Periksa apakah jawaban valid
+                    answers[question.type] = answer; // Simpan jawaban ke objek answers
+                    questionIndex++; // Pindah ke pertanyaan berikutnya
+                    askNextQuestion(); // Ajukan pertanyaan berikutnya
+                } else {
+                    console.log("Jawaban tidak valid. Silakan coba lagi."); // Tampilkan pesan kesalahan jika jawaban tidak valid
+                    askNextQuestion(); // Tanyakan kembali
+                }
+            });
+        } else {
+            rl.close(); // Tutup antarmuka readline setelah semua pertanyaan selesai
+            callback(answers); // Panggil callback dengan jawaban yang dikumpulkan
+        }
+    };
+
+    askNextQuestion(); // Mulai proses pertanyaan
+};
+
+// Mengatur yargs untuk menangani perintah command line
+yargs.command({
+    command: 'add', // Nama perintah CLI
+    describe: 'Tambah kontak baru', // Deskripsi perintah
+    builder: { // Definisi argumen yang diterima perintah ini
+        name: {
+            describe: 'Nama kontak', // Deskripsi argumen 'name'
+            demandOption: true, // Argumen ini wajib
+            type: 'string', // Tipe data argumen adalah string
+        },
+        email: {
+            describe: 'Email kontak', // Deskripsi argumen 'email'
+            demandOption: false, // Argumen ini tidak wajib
+            type: 'string', // Tipe data argumen adalah string
+        },
+        mobile: {
+            describe: 'Nomor telepon kontak', // Deskripsi argumen 'mobile'
+            demandOption: true, // Argumen ini wajib
+            type: 'string', // Tipe data argumen adalah string
+        },
+    },
+    handler(argv) { // Fungsi yang dijalankan jika perintah 'add' digunakan
+        // Validasi email jika ada
+        if (argv.email && !validator.isEmail(argv.email)) { // Periksa format email
+            console.log("Email tidak valid"); // Tampilkan pesan kesalahan jika email tidak valid
+            return; // Keluar dari fungsi jika email tidak valid
+        }
+        // Validasi nomor telepon
+        if (!validator.isMobilePhone(argv.mobile, "id-ID")) { // Periksa format nomor telepon untuk Indonesia
+            console.log("Nomor telepon tidak valid"); // Tampilkan pesan kesalahan jika nomor telepon tidak valid
+            return; // Keluar dari fungsi jika nomor telepon tidak valid
+        }
+
+        // Membuat objek kontak dengan data dari argumen CLI
+        const contact = {
+            name: argv.name, // Ambil nama dari argumen
+            email: argv.email || '', // Ambil email dari argumen, atau string kosong jika tidak ada
+            phone: argv.mobile, // Ambil nomor telepon dari argumen
+        };
+        saveContact(contact); // Simpan kontak baru ke file
+        // Tampilkan konfirmasi
+        console.log("Kontak berhasil ditambahkan:");
+        console.log(`Nama: ${contact.name}`); // Tampilkan nama kontak
+        console.log(`Email: ${contact.email}`); // Tampilkan email kontak
+        console.log(`Nomor Telepon: ${contact.phone}`); // Tampilkan nomor telepon kontak
+    },
+})
+.command({
+    command: 'update', // Nama perintah CLI
+    describe: 'Perbarui kontak yang ada', // Deskripsi perintah
+    builder: { // Definisi argumen yang diterima perintah ini
+        oldName: {
+            describe: 'Nama kontak yang ingin diperbarui', // Deskripsi argumen 'oldName'
+            demandOption: true, // Argumen ini wajib
+            type: 'string', // Tipe data argumen adalah string
+        },
+        newName: {
+            describe: 'Nama kontak baru', // Deskripsi argumen 'newName'
+            demandOption: true, // Argumen ini wajib
+            type: 'string', // Tipe data argumen adalah string
+        },
+        email: {
+            describe: 'Email kontak baru', // Deskripsi argumen 'email'
+            demandOption: false, // Argumen ini tidak wajib
+            type: 'string', // Tipe data argumen adalah string
+        },
+        mobile: {
+            describe: 'Nomor telepon kontak baru', // Deskripsi argumen 'mobile'
+            demandOption: false, // Argumen ini tidak wajib
+            type: 'string', // Tipe data argumen adalah string
+        },
+    },
+    handler(argv) { // Fungsi yang dijalankan jika perintah 'update' digunakan
+        // Validasi email jika ada
+        if (argv.email && !validator.isEmail(argv.email)) { // Periksa format email
+            console.log("Email tidak valid"); // Tampilkan pesan kesalahan jika email tidak valid
+            return; // Keluar dari fungsi jika email tidak valid
+        }
+        // Validasi nomor telepon jika ada
+        if (argv.mobile && !validator.isMobilePhone(argv.mobile, "id-ID")) { // Periksa format nomor telepon untuk Indonesia
+            console.log("Nomor telepon tidak valid"); // Tampilkan pesan kesalahan jika nomor telepon tidak valid
+            return; // Keluar dari fungsi jika nomor telepon tidak valid
+        }
+
+        // Membuat objek pembaruan dengan data dari argumen CLI
+        const updates = {
+            email: argv.email || undefined, // Ambil email dari argumen jika ada, jika tidak, gunakan undefined
+            phone: argv.mobile || undefined, // Ambil nomor telepon dari argumen jika ada, jika tidak, gunakan undefined
+        };
+        updateContact(argv.oldName, argv.newName || undefined, updates); // Perbarui kontak dengan nama dan data baru
+    },
+})
+.command({
+    command: 'delete', // Nama perintah CLI
+    describe: 'Hapus kontak yang ada', // Deskripsi perintah
+    builder: { // Definisi argumen yang diterima perintah ini
+        name: {
+            describe: 'Nama kontak yang ingin dihapus', // Deskripsi argumen 'name'
+            demandOption: true, // Argumen ini wajib
+            type: 'string', // Tipe data argumen adalah string
+        },
+    },
+    handler(argv) { // Fungsi yang dijalankan jika perintah 'delete' digunakan
+        deleteContact(argv.name); // Hapus kontak berdasarkan nama
+    },
+})
+.command({
+    command: 'list', // Nama perintah CLI
+    describe: 'Tampilkan semua kontak', // Deskripsi perintah
+    handler() { // Fungsi yang dijalankan jika perintah 'list' digunakan
+        let contacts = readContact(); // Membaca daftar kontak dari file
+        if (contacts.length === 0) { // Jika tidak ada kontak
+            console.log("Tidak ada kontak yang tersedia."); // Tampilkan pesan bahwa tidak ada kontak
+        } else {
+            console.log("Daftar Kontak:");
+            contacts.forEach(contact => { // Tampilkan setiap kontak dalam daftar
+                console.log(`Nama: ${contact.name}`);
+                console.log(`Email: ${contact.email}`);
+                console.log(`Nomor Telepon: ${contact.phone}`);
+                console.log('------------------');
+            });
+        }
+    },
+});
+
+// Mengecek argumen CLI dan menjalankan perintah yang sesuai
+yargs.parse();
