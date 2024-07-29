@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Home</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+            }
+            nav {
+                margin-bottom: 20px;
+            }
+            .input-box {
+                margin-bottom: 20px;
+            }
+            .input-box input {
+                margin-right: 10px;
+            }
+
+            
+        </style>
+    </head>
+    <body>
+        <% const nama = "Lisa"; %>
+        <h1>Welcome to my page <%= nama %></h1>
+        <title><%title%></title>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/about">About</a></li>
+                <li><a href="/contact">Contact</a></li>
+            </ul>
+        </nav>
+        <div class="input-box">
+            <label for="productId">Product ID:</label>
+            <input type="text" id="productId" name="productId" />
+            <label for="categoryId">Category ID:</label>
+            <input type="text" id="categoryId" name="categoryId" />
+            <label for="price">Price:</label>
+            <input type="text" id="price" name="price" />
+            <button onclick="navigateToProduct()">Go to Product</button>
+        </div>
+        <p>Use the menu to navigate through the site.</p>
+        <script>
+            function navigateToProduct() {
+                const productId = document.getElementById("productId").value;
+                const categoryId = document.getElementById("categoryId").value;
+                const price = document.getElementById("price").value;
+                let url = `/product/${productId}/category/${categoryId}`;
+                if (price) {
+                    url += `?price=${price}`;
+                }
+                window.location.href = url;
+            }
+        </script>
+    </body>
+</html>
