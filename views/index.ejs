@@ -1,37 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Home</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-            }
-            nav {
-                margin-bottom: 20px;
-            }
-            .input-box {
-                margin-bottom: 20px;
-            }
-            .input-box input {
-                margin-right: 10px;
-            }
 
-            
-        </style>
-    </head>
-    <body>
         <% const nama = "Lisa"; %>
         <h1>Welcome to my page <%= nama %></h1>
-        <title><%title%></title>
-        <nav>
-            <ul>
-                <li><a href="/">Home</a></li>
-                <li><a href="/about">About</a></li>
-                <li><a href="/contact">Contact</a></li>
-            </ul>
-        </nav>
         <div class="input-box">
             <label for="productId">Product ID:</label>
             <input type="text" id="productId" name="productId" />
@@ -54,5 +23,3 @@
                 window.location.href = url;
             }
         </script>
-    </body>
-</html>
