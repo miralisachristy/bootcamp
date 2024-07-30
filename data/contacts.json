@@ -1,7 +1,17 @@
 [
-  {
-    "name": "Lalisa",
-    "phone": "081323454321",
-    "email": "a12@gmail.com"
-  }
+    {
+        "name": "Lalisa",
+        "phone": "081323454321",
+        "email": "a12@gmail.com"
+    },
+    {
+        "name": "Lalisa2",
+        "phone": "081323454321",
+        "email": "a12@gmail.com"
+    },
+    {
+        "name": "Lalisa3",
+        "phone": "081323454321",
+        "email": "a12@gmail.com"
+    }
 ]

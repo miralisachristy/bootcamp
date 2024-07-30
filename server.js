@@ -3,6 +3,7 @@ const path = require("path");
 const app = express();
 const port = 3000;
 const expressLayouts = require("express-ejs-layouts");
+const fs = require("fs");
 
 const dataDir = path.join(__dirname, "data");
 
@@ -28,12 +29,24 @@ app.get("/about", (req, res) => {
 
 // Rute untuk halaman Contact dengan data
 app.get("/contact", (req, res) => {
-    const listContact = [
-        { name: "AKW", email: "abc@gmail.com" },
-        { name: "Lisa", email: "def@gmail.com" },
-        { name: "Icha", email: "xyz@gmail.com" },
-    ];
-    res.render("contact", { listContact });
+    // const listContact = [
+    //     { name: "AKW", email: "abc@gmail.com" },
+    //     { name: "Lisa", email: "def@gmail.com" },
+    //     { name: "Icha", email: "xyz@gmail.com" },
+    // ];
+    fs.readFile(
+        path.join(__dirname, "data", "contacts.json"),
+        "utf-8",
+        (err, data) => {
+            if (err) {
+                console.log(err);
+                req.status(500).send("Internal Server Error");
+            } else {
+                const contacts = JSON.parse(data);
+                res.render("contact", { contacts });
+            }
+        }
+    );
 });
 
 // Rute untuk produk dengan ID dan kategori
