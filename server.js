@@ -4,15 +4,38 @@ const app = express();
 const port = 3000;
 const expressLayouts = require("express-ejs-layouts");
 const fs = require("fs");
+const bodyParser = require("body-parser");
+
+// Rute untuk menghapus kontak berdasarkan nama
+app.get("/delete/:name", async (req, res) => {
+    try {
+        const name = decodeURIComponent(req.params.name);
+        const result = await Contact.deleteOne({ name: name });
+
+        if (result.deletedCount > 0) {
+            res.send("Contact deleted successfully");
+        } else {
+            res.send("No contact found with that name");
+        }
+    } catch (error) {
+        res.status(500).send("Error deleting contact");
+    }
+});
 
 const dataDir = path.join(__dirname, "data");
 
 // Konfigurasi express untuk menggunakan EJS Layout
 app.use(expressLayouts);
 app.set("layout", "layout/layout"); // Menentukan layout yang akan digunakan
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // Menyajikan file statis dari folder 'public'
 app.use(express.static(path.join(__dirname, "public")));
+
+app.use((req, res, next) => {
+    console.log("Time:", Date.now());
+    next();
+});
 
 // Mengatur EJS sebagai template engine
 app.set("view engine", "ejs");
@@ -26,6 +49,23 @@ app.get("/", (req, res) => {
 app.get("/about", (req, res) => {
     res.render("about");
 });
+
+// Function to read contacts from JSON file
+const readContacts = () => {
+    return new Promise((resolve, reject) => {
+        fs.readFile(
+            path.join(__dirname, "data", "contacts.json"),
+            "utf-8",
+            (err, data) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(JSON.parse(data));
+                }
+            }
+        );
+    });
+};
 
 // Rute untuk halaman Contact dengan data
 app.get("/contact", (req, res) => {
